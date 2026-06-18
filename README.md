@@ -41,7 +41,7 @@ All files for Phase 1 are in the [`Phase1/`](Phase1/) folder.
 
 ## Authors
 - **Mohammad Reza Mahdavi**
-- **Mohammad Mehdi Borzeger**
+- **Mohammad Mahdi Barzegar**
 
 *Course: Modern Control - Prof. Pourshamsaei*  
 *Date: June 2026*
