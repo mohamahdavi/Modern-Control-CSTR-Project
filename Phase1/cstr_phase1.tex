@@ -1,0 +1,251 @@
+% !TEX program = xelatex
+\documentclass[12pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}   % for side-by-side figures
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}      % Latin Modern fonts
+
+% --- Math settings ---
+\allowdisplaybreaks
+
+% --- Page margins ---
+\geometry{margin=1in}
+
+% --- Project information ---
+\title{Phase 1 of Modern Control Project \\
+       Modeling, Structural Analysis, and Validation of a Non‑Isothermal CSTR Reactor}
+\author{Mohammad Reza Mahdavi \and Mohammad Mehdi Barzeger}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report presents Phase 1 of the Modern Control project focusing on a continuous stirred‑tank reactor (CSTR) with non‑isothermal operation. The work begins by extracting the nonlinear differential equations governing the system from the reference paper. The model is then linearized about a desired operating point, and stability and sensitivity analyses are performed. Using similarity transformations, canonical forms of the model are derived, and a comprehensive controllability and observability analysis is carried out through five different methods. Finally, the linear model is validated by comparing its response to that of the nonlinear model for step and sinusoidal inputs, with accuracy quantified using the RMSE metric. All computations are implemented in MATLAB.
+\end{abstract}
+
+% ======================================================================
+\section{Introduction}
+% ======================================================================
+The CSTR is a classical chemical process exhibiting strongly nonlinear behavior due to the exponential Arrhenius reaction term and heat transfer. Accurate modeling of this system is the first step toward designing robust controllers. In this phase, after deriving the nonlinear model, linearization around the equilibrium point is performed, followed by structural, stability, and sensitivity analyses. Finally, validation of the linear model determines its accuracy and range of applicability.
+
+% ======================================================================
+\section{Mathematical Model and Nonlinear State Equations}
+% ======================================================================
+Based on the reference paper \cite{perez}, the governing equations of the reactor in dimensional form are:
+\begin{align}
+\frac{dC_a}{dt} &= \frac{F}{V}(C_{ao}-C_a) - \alpha C_a e^{-E/RT} \label{eq:ca}\\
+\frac{dT}{dt}   &= \frac{F}{V}(T_o-T) - \frac{H}{\rho C_p}\alpha C_a e^{-E/RT} - \frac{UA}{\rho V C_p}(T-T_j) \label{eq:T}\\
+\frac{dT_j}{dt} &= \frac{F_j}{V_j}(T_{j0}-T_j) + \frac{UA}{\rho_j V_j C_{pj}}(T-T_j) \label{eq:Tj}
+\end{align}
+
+Assuming the jacket temperature dynamics are much faster than the reactor temperature dynamics, $T_j$ can be obtained from the following algebraic equation:
+\begin{equation}
+T_j = \frac{\rho_j C_{pj} F_j T_{j0} + UA\, T}{\rho_j C_{pj} F_j + UA} \label{eq:Tj_alg}
+\end{equation}
+
+Substituting Eq.~\eqref{eq:Tj_alg} into Eq.~\eqref{eq:T} and using the dimensionless variables introduced in the paper yields the dimensionless state‑space model:
+\begin{align}
+\frac{dx_2}{d\tau} &= \frac{x_{60}}{x_1}(x_{20}-x_2) - c_0 x_2 e^{-1/x_3} \label{eq:x2}\\
+\frac{dx_3}{d\tau} &= \frac{x_{60}}{x_1}(x_{30}-x_3) + c_1 x_2 e^{-1/x_3} - \frac{c_2 c_3 x_5 (x_3-x_{40})}{x_1(c_3 x_5 + c_4)} \label{eq:x3}
+\end{align}
+
+The state, input, and output vectors are defined as:
+\begin{align*}
+x &= \begin{bmatrix} x_2 \\ x_3 \end{bmatrix} = \begin{bmatrix} C_a / C_{aor} \\ R\,T / E \end{bmatrix}, \quad
+u = x_5 = \frac{F_j}{F_{js}},\\[4pt]
+y &= x_3 \quad \text{(dimensionless reactor temperature)}
+\end{align*}
+The overall nonlinear model is $\dot{x} = f(x,u), \; y = h(x,u)$.
+
+Numerical values of the dimensionless parameters are given in Table \ref{tab:dimless_param}.
+\begin{table}[H]
+\centering
+\caption{Computed dimensionless parameter values}
+\label{tab:dimless_param}
+\begin{tabular}{c|c|c}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Description} \\ 
+\midrule
+$c_0$ & $8.521 \times 10^{10}$ & Dimensionless reaction rate constant \\
+$c_1$ & $1.109 \times 10^{9}$ & Dimensionless heat of reaction \\
+$c_2$ & 25.15 & Dimensionless heat transfer \\
+$c_3$ & 20.01 & Dimensionless jacket flow rate \\
+$c_4$ & 241.2 & Dimensionless jacket thermal constant \\
+$x_{20}$ & 2.041 & Dimensionless inlet concentration \\
+$x_{30}$ & 0.03509 & Dimensionless inlet temperature \\
+$x_{40}$ & 0.03509 & Dimensionless cooling water temperature \\
+$x_{60}$ & 1 & Normalized nominal inlet flow rate \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ======================================================================
+\section{Linearization and Stability Analysis}
+% ======================================================================
+\subsection{Finding the Equilibrium Point}
+For the nominal input $u_{\text{nom}}=1$, the equilibrium point was obtained by numerically solving $\dot{x}=0$:
+\[
+x_{ss} = \begin{bmatrix} 1.783 \\ 0.03625 \end{bmatrix} \implies T_{ss} = \frac{x_{3,ss} \cdot E}{R} \approx 304.5\ \text{K}.
+\]
+
+\subsection{Linear State‑Space Matrices}
+By evaluating the Jacobians of $f(x,u)$ at the equilibrium point, the linear system matrices are:
+\begin{align*}
+A &= \begin{bmatrix} -1.0903 & -122.5 \\ 0.001175 & -1.332 \end{bmatrix}, \quad
+B = \begin{bmatrix} 0 \\ -0.002063 \end{bmatrix},\\
+C &= \begin{bmatrix} 0 & 1 \end{bmatrix}, \quad D = 0.
+\end{align*}
+
+\subsection{Stability and Transient Response}
+The system poles are $\lambda_{1,2} = -1.2113 \pm j\,0.3594$, indicating stability at the operating point. The high damping ratio ($\zeta \approx 0.959$) implies a fast response with negligible overshoot. The pole‑zero map and step response are shown in Fig.~\ref{fig:phase1_analysis}.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{pzmap_cstr.png}
+    \caption{Pole‑zero map}
+    \label{fig:pzmap}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{step_cstr.png}
+    \caption{Open‑loop step response}
+    \label{fig:step}
+\end{subfigure}
+\caption{Stability and transient response analysis of the linearized system}
+\label{fig:phase1_analysis}
+\end{figure}
+
+\subsection{Sensitivity Analysis}
+A sensitivity analysis was performed on the overall heat transfer coefficient $U$ by varying it $\pm10\%$. The results in Table \ref{tab:poles} and Fig.~\ref{fig:sens} show that decreasing $U$ (reduced cooling capacity) moves the poles toward the imaginary axis (slower response with more oscillation), while increasing $U$ improves damping and response speed. This sensitivity must be considered in controller design.
+
+\begin{table}[H]
+\centering
+\caption{Pole locations with variations in $U$}
+\label{tab:poles}
+\begin{tabular}{c|c|c}
+\toprule
+\textbf{$U$ (kJ/h\,m$^2$K)} & \textbf{Poles} & \textbf{Comment} \\
+\midrule
+2758.5 ($-10\%$) & $-1.143 \pm j\,0.452$ & More oscillation \\
+3065.0 (nominal) & $-1.211 \pm j\,0.359$ & Nominal, good damping \\
+3371.5 ($+10\%$) & $-1.279 \pm j\,0.244$ & Higher damping \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{sensitivity_pzmap.png}
+    \caption{Pole migration}
+    \label{fig:sens_pz}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{sensitivity_step.png}
+    \caption{Step response comparison}
+    \label{fig:sens_step}
+\end{subfigure}
+\caption{Sensitivity analysis results for parameter $U$}
+\label{fig:sens}
+\end{figure}
+
+% ======================================================================
+\section{Canonical Forms and Structural Analysis}
+% ======================================================================
+\subsection{Canonical Forms and Similarity Transformations}
+After obtaining the system matrices $(A,B,C,D)$, similarity transformations were used to convert the model to the controller and observer canonical forms. The controller canonical form is:
+\begin{align*}
+A_{Co} &= \begin{bmatrix} 0 & 1 \\ -2.0523 & -2.9536 \end{bmatrix}, \quad
+B_{Co} = \begin{bmatrix} 0 \\ 1 \end{bmatrix},\\
+C_{Co} &= \begin{bmatrix} -7.87\times10^{-4} & 0 \end{bmatrix}, \quad D_{Co}=0.
+\end{align*}
+The observer canonical form is:
+\begin{align*}
+A_{Ob} &= \begin{bmatrix} 0 & -2.0523 \\ 1 & -2.9536 \end{bmatrix}, \quad
+B_{Ob} = \begin{bmatrix} -7.87\times10^{-4} \\ 0 \end{bmatrix},\\
+C_{Ob} &= \begin{bmatrix} 0 & 1 \end{bmatrix}, \quad D_{Ob}=0.
+\end{align*}
+These forms clarify the internal structure of the system for further analysis.
+
+\subsection{Comprehensive Controllability Analysis}
+Controllability was verified using five independent methods, all in complete agreement:
+\begin{enumerate}
+    \item \textbf{Controllability matrix:} $\mathcal{C} = [B, AB]$ was formed with entries $\begin{bmatrix} 0 & 0.062 \\ -0.008 & 0.0015 \end{bmatrix}$ and rank 2.
+    \item \textbf{Manual calculation:} The same matrix was computed without built‑in MATLAB functions, and its rank was confirmed.
+    \item \textbf{Jordan form:} In the Jordan form $A_J$, all rows of $B_J$ corresponding to each Jordan block are non‑zero.
+    \item \textbf{Controllability Gramian:} The Gramian $W_c$ is positive definite ($\text{eig}(W_c) > 0$).
+    \item \textbf{Popov–Belevitch–Hautus test:} For all eigenvalues $\lambda_i$, the matrix $[A-\lambda_i I \;\; B]$ has full rank (2).
+\end{enumerate}
+
+\subsection{Comprehensive Observability Analysis}
+Observability was also confirmed using five methods:
+\begin{enumerate}
+    \item \textbf{Observability matrix:} $\mathcal{O} = \begin{bmatrix} C \\ CA \end{bmatrix}$ with entries $\begin{bmatrix} 0 & 1 \\ 0.0007 & -1.9024 \end{bmatrix}$ has rank 2.
+    \item \textbf{Manual calculation:} The rank of $\mathcal{O}$ was manually verified to be 2.
+    \item \textbf{Jordan form:} In $A_J$, all columns of $C_J$ corresponding to each Jordan block are non‑zero.
+    \item \textbf{Observability Gramian:} The Gramian $W_o$ is positive semi‑definite and indicates output observability.
+    \item \textbf{Popov–Belevitch–Hautus test:} For all $\lambda_i$, $\begin{bmatrix} A-\lambda_i I \\ C \end{bmatrix}$ has full rank (2).
+\end{enumerate}
+
+\textbf{Conclusion:} The system is both controllable and observable, hence it is a \textbf{minimal realization}.
+
+% ======================================================================
+\section{Validation and Model Comparison}
+% ======================================================================
+To assess the accuracy of the linear model, its response is compared with that of the original nonlinear model for step and sinusoidal inputs. The quantitative metric is the root mean square error (RMSE).
+
+\subsection{Time Response Comparison}
+Figure \ref{fig:validation_signals} shows an example of the response comparison for a sinusoidal input. The close agreement between the two curves indicates the high accuracy of the linear model in the vicinity of the operating point.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{validation_signals.png}
+\caption{Comparison of linear and nonlinear model responses to a sinusoidal input with amplitude 0.1 and frequency 0.5\,Hz}
+\label{fig:validation_signals}
+\end{figure}
+
+\subsection{Error Quantification and Comprehensive Analysis}
+Figure \ref{fig:rmse_analysis} shows how the RMSE varies with input amplitude and frequency.
+\begin{itemize}
+    \item \textbf{Step input:} As the step amplitude (deviation from the operating point) increases, the error grows. However, the maximum RMSE in the tested range remains below $2\times10^{-4}$, indicating excellent accuracy.
+    \item \textbf{Sinusoidal input:} Error increases with amplitude. Interestingly, as frequency rises, the error decreases or remains constant, a phenomenon caused by the fast system dynamics. The maximum error recorded in these tests is below $4\times10^{-5}$.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{rmse_analysis.png}
+\caption{RMSE variation with step amplitude, sinusoidal amplitude, and frequency}
+\label{fig:rmse_analysis}
+\end{figure}
+
+\subsection{Final Model Validity Assessment}
+The results clearly show that the obtained linearized model is an extremely accurate approximation of the nonlinear system dynamics around the operating point. The very small RMSE and the matching response curves fully validate this model for designing linear controllers (such as LQR or PID) in Phase 2 of the project. It should be noted that as the system moves further from the operating point (excessive input amplitudes), nonlinear effects intensify and the linear model's accuracy degrades.
+
+% ======================================================================
+\section{Overall Conclusion}
+% ======================================================================
+In this phase, the essential and critical steps for analyzing and preparing the model of a nonlinear system were completed. The nonlinear CSTR model was successfully derived and linearized around the operating point. Stability analysis confirmed asymptotic stability, and sensitivity analysis provided valuable insight into the influence of physical parameters on system dynamics. Comprehensive analyses proved the system to be a minimal realization. Finally, validation using the RMSE metric demonstrated that the linear model possesses very high accuracy and can serve as a reliable foundation for designing advanced control systems in Phase 2.
+
+\begin{thebibliography}{9}
+\bibitem{perez}
+Perez, T., \& Albertos, P. (2004). Self-oscillating and chaotic behaviour of a PI-controlled CSTR. \textit{Journal of Process Control}, 14(3), 321-330.
+\end{thebibliography}
+
+\end{document}
