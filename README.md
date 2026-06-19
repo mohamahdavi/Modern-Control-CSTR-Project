@@ -39,9 +39,12 @@ All files for Phase 1 are in the [`Phase1/`](Phase1/) folder.
 - Phase 2 will design linear controllers (LQR, PID) and observers, then test them on the nonlinear model.
 - Phase 3 may explore robust or nonlinear control approaches.
 
+- **Course:** Modern Control (25792)
+- **Instructor:** Prof. Hossein Pourshamsaei
+- **Date:** June 2026
+
 ## Authors
 - **Mohammad Reza Mahdavi**
 - **Mohammad Mahdi Barzegar**
 
-*Course: Modern Control - Prof. Pourshamsaei*  
-*Date: June 2026*
+*Status: In Progress – remaining sections will be added soon.*
