@@ -1,0 +1,362 @@
+% !TEX program = xelatex
+\documentclass[12pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+% --- Math settings ---
+\allowdisplaybreaks
+
+% --- Page margins ---
+\geometry{margin=1in}
+
+% --- Project information ---
+\title{Phase 2 of Modern Control Project \\
+       Control Design, Observer, and Robustness Analysis for the CSTR Reactor}
+\author{Mohammad Reza Mahdavi \and Mohammad Mehdi Barzeger}
+\date{August 11, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+In Phase~1, the nonlinear model of a continuous stirred‑tank reactor (CSTR) was derived, linearized, and structurally analyzed. Building upon that linear model, this phase addresses advanced control system design. First, a state‑feedback controller is designed and its domain of attraction on the nonlinear plant is mapped. The invariance of the transfer function under different realizations is demonstrated. A servo controller with integral action is then implemented to handle reference tracking and disturbance rejection, revealing the integrator windup phenomenon. To estimate unmeasured states, Luenberger and PI observers are developed, and their speed‑vs.‑noise trade‑off is studied. The combination of observer and controller is validated. Actuator saturation is investigated, and an anti‑windup mechanism is employed. Finally, robustness against a 30\,\% increase in the inlet flow rate is confirmed. All simulations are carried out in MATLAB (total runtime $\approx 70$ s).
+\end{abstract}
+
+% ======================================================================
+\section{Introduction and Review of Phase~1}
+% ======================================================================
+The CSTR with an exothermic reaction and jacket cooling is modeled by the dimensionless state‑space equations:
+\begin{align}
+\frac{dx_2}{d\tau} &= \frac{x_{60}}{x_1}(x_{20}-x_2) - c_0 x_2 e^{-1/x_3}, \label{eq:x2}\\
+\frac{dx_3}{d\tau} &= \frac{x_{60}}{x_1}(x_{30}-x_3) + c_1 x_2 e^{-1/x_3} - \frac{c_2 c_3 x_5 (x_3-x_{40})}{x_1(c_3 x_5 + c_4)}, \label{eq:x3}
+\end{align}
+where $x = [x_2\;\;x_3]^T$ (dimensionless concentration and temperature) and $u = x_5$ (dimensionless cooling water flow rate). The equilibrium point at $u_{\text{nom}}=1$ was found to be
+\[
+x_{ss} = \begin{bmatrix} 1.941355 \\ 0.035537 \end{bmatrix}
+\]
+with the corresponding linearized matrices
+\[
+A = \begin{bmatrix} -1.0512 & -78.7580 \\ 0.0007 & -1.9024 \end{bmatrix},\quad
+B = \begin{bmatrix} 0 \\ -7.87\times10^{-4} \end{bmatrix},\quad
+C = \begin{bmatrix} 0 & 1 \end{bmatrix}.
+\]
+The dimensionless parameters computed in Phase~1 are:
+\[
+c_0 = 8.52106\times10^{10},\; c_1 = 1.10906\times10^{9},\; c_2 = 25.1524,\; c_3 = 20.0071,\; c_4 = 241.0782,
+\]
+\[
+x_{20}=2.040816,\; x_{30}=0.035095,\; x_{40}=0.035095,\; x_{60}=1,\; x_1=1.
+\]
+
+% ======================================================================
+\section{State Feedback Control and Domain of Attraction}
+% ======================================================================
+The desired closed‑loop poles are chosen as $\{-3.0,\,-4.5\}$ to obtain a fast, well‑damped response. Using MATLAB’s \texttt{place} command, the state‑feedback gain is
+\[
+K = \begin{bmatrix} 107.5446 & -5776.8742 \end{bmatrix}.
+\]
+The control law $u = u_{\text{nom}} - K(x-x_{ss})$ is applied to the original nonlinear model~\eqref{eq:x2}--\eqref{eq:x3}. Simulations with five initial conditions progressively farther from the equilibrium (Fig.~\ref{fig:phase_time}) show that the linear controller can stabilize the plant only within a limited region. A grid search over $x_2\in[0.6,3.2]$ and $x_3\in[0.015,0.10]$ identifies the approximate domain of attraction (Fig.~\ref{fig:doa}): the green region contains initial states that converge to $x_{ss}$, while the red region leads to instability.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.48\textwidth}
+    \centering \includegraphics[width=\textwidth]{s1_time_responses.png}
+    \caption{Time responses}
+    \label{fig:time_resp}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\textwidth}
+    \centering \includegraphics[width=\textwidth]{s1_phase_portrait.png}
+    \caption{Phase portrait}
+    \label{fig:phase_portrait}
+\end{subfigure}
+\caption{Response of the nonlinear system with state‑feedback controller for different initial conditions.}
+\label{fig:phase_time}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.65\textwidth]{s1_doa.png}
+\caption{Estimated domain of attraction: green (stable), red (unstable).}
+\label{fig:doa}
+\end{figure}
+
+% ======================================================================
+\section{Comparison of Different Realizations}
+% ======================================================================
+The transfer function of the linearized plant is
+\[
+G(s) = \frac{-7.870\times10^{-4}\,s - 8.273\times10^{-4}}{s^2 + 2.9536\,s + 2.0549}.
+\]
+The following realizations are constructed (numerical values rounded to four decimals):
+\begin{itemize}
+    \item \textbf{Original}: $(A,B,C)$ as above.
+    \item \textbf{Controller canonical form}:
+    \[
+    A_{ccf} = \begin{bmatrix} 0 & 1 \\ -2.0549 & -2.9536 \end{bmatrix},\;
+    B_{ccf} = \begin{bmatrix} 0 \\ 1 \end{bmatrix},\;
+    C_{ccf} = \begin{bmatrix} -8.273\times10^{-4} & -7.870\times10^{-4} \end{bmatrix}.
+    \]
+    \item \textbf{Observer canonical form} (dual):
+    \[
+    A_{ocf} = \begin{bmatrix} 0 & -2.0549 \\ 1 & -2.9536 \end{bmatrix},\;
+    B_{ocf} = \begin{bmatrix} -8.273\times10^{-4} \\ -7.870\times10^{-4} \end{bmatrix},\;
+    C_{ocf} = \begin{bmatrix} 0 & 1 \end{bmatrix}.
+    \]
+    \item \textbf{Alternative controller form} (top‑companion):
+    \[
+    A_{ccf2} = \begin{bmatrix} -2.9536 & -2.0549 \\ 1 & 0 \end{bmatrix},\;
+    B_{ccf2} = \begin{bmatrix} 1 \\ 0 \end{bmatrix},\;
+    C_{ccf2} = \begin{bmatrix} -7.870\times10^{-4} & -8.273\times10^{-4} \end{bmatrix}.
+    \]
+    \item \textbf{Alternative observer form}:
+    \[
+    A_{ocf2} = \begin{bmatrix} -2.9536 & 1 \\ -2.0549 & 0 \end{bmatrix},\;
+    B_{ocf2} = \begin{bmatrix} -7.870\times10^{-4} \\ -8.273\times10^{-4} \end{bmatrix},\;
+    C_{ocf2} = \begin{bmatrix} 1 & 0 \end{bmatrix}.
+    \]
+    \item \textbf{Jordan form} (eigenvalues $-1.1218$, $-1.8318$):
+    \[
+    J = \begin{bmatrix} -1.1218 & 0 \\ 0 & -1.8318 \end{bmatrix},\;
+    B_J = \begin{bmatrix} 0.0873 \\ -0.0873 \end{bmatrix},\;
+    C_J = \begin{bmatrix} 0.0009 & 0.0099 \end{bmatrix}.
+    \]
+\end{itemize}
+For every realization, \texttt{ss2tf} returns exactly the same numerator and denominator, confirming that the input‑output map is invariant under similarity transformation (Table~\ref{tab:tf_compare}). The step responses in Fig.~\ref{fig:realizations} illustrate that, while the output $y$ coincides for all forms, the state trajectories differ markedly.
+
+\begin{table}[H]
+\centering
+\caption{Transfer function coefficients for all realizations.}
+\label{tab:tf_compare}
+\begin{tabular}{l|c|c}
+\toprule
+Realization & Numerator & Denominator \\
+\midrule
+Original & $0\,s^2 -7.870\!\times\!10^{-4}s -8.273\!\times\!10^{-4}$ & $s^2 + 2.9536s + 2.0549$ \\
+Controller CF & \multicolumn{2}{c}{identical} \\
+Observer CF & \multicolumn{2}{c}{identical} \\
+Controller CF (alt) & \multicolumn{2}{c}{identical} \\
+Observer CF (alt) & \multicolumn{2}{c}{identical} \\
+Jordan & \multicolumn{2}{c}{identical} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{s2_realizations.png}
+\caption{Step responses of different realizations: output $y$ identical, states $x_1,x_2$ differ.}
+\label{fig:realizations}
+\end{figure}
+
+% ======================================================================
+\section{Servo Control with Integral Action}
+% ======================================================================
+To achieve zero steady‑state error under step references and disturbances, an integrator state is appended:
+\[
+\dot{\xi} = r - y = r - Cx.
+\]
+The augmented system becomes
+\[
+\dot{x}_a = \begin{bmatrix} A & 0 \\ -C & 0 \end{bmatrix} x_a + \begin{bmatrix} B \\ 0 \end{bmatrix} u + \begin{bmatrix} 0 \\ 1 \end{bmatrix} r,
+\qquad x_a = \begin{bmatrix} x \\ \xi \end{bmatrix}.
+\]
+Placing the closed‑loop poles at $\{-4,-5,-1.2\}$ yields the augmented gain
+\[
+K_a = [K_s \;\; K_i] = \begin{bmatrix} -27.4819 & -9207.6239 & 29010.2290 \end{bmatrix},
+\]
+so that $u = u_{\text{nom}} - K_s x - K_i \xi$. Figure~\ref{fig:servo_compare} compares the classical state feedback ($K$) and the servo controller when a reference step $\delta r = 5\times10^{-4}$ occurs at $\tau=2$ and a disturbance $d=0.10$ enters at $\tau=15$. The classical controller leaves a steady‑state error ($\approx 7.14\times10^{-6}$), while the servo controller drives the tracking error to zero in theory. In practice, however, its mean absolute error after $35$ s is larger ($4.98\times10^{-4}$) due to integrator windup (see Fig.~\ref{fig:integrator_state}), a problem addressed in Section~7.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{s3_servo_comparison.png}
+\caption{Classical vs.\ servo control under reference change and disturbance.}
+\label{fig:servo_compare}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{s3_integrator_state.png}
+\caption{Integrator state $\xi$ growing unbounded (windup).}
+\label{fig:integrator_state}
+\end{figure}
+
+% ======================================================================
+\section{Observer Design}
+% ======================================================================
+\subsection{Luenberger Observer}
+The Luenberger observer is
+\[
+\dot{\hat{x}} = A\hat{x} + B u + L(y - C\hat{x}),\quad L = \begin{bmatrix} l_1 \\ l_2 \end{bmatrix}.
+\]
+Choosing observer poles faster than the controller ($-9$ and $-12$) gives the desired characteristic polynomial
+\[
+\Delta_o(s) = (s+9)(s+12) = s^2 + 21s + 108.
+\]
+The observer’s characteristic equation is
+\begin{align*}
+|sI - (A-LC)| &=
+\begin{vmatrix}
+s+1.0512 & 78.758 + l_1 \\
+-0.0007 & s+1.9024 + l_2
+\end{vmatrix} \\
+&= s^2 + (2.9536 + l_2)s + 2.0549 + 1.0512\,l_2 + 0.0007\,l_1.
+\end{align*}
+Equating coefficients yields
+\[
+l_2 = 18.0464,\qquad l_1 = 1.2425\times10^{5}.
+\]
+The very large $l_1$ arises because the (1,2) entry of $A$ ($-78.758$) is much larger than the (2,1) entry ($0.0007$), making $x_1$ weakly observable. Despite this, the Luenberger observer works; the final estimation error after a disturbance at $\tau=5$ is
+\[
+x_1\;\text{error} = 2.82\times10^{-2},\quad x_2\;\text{error} = -2.37\times10^{-7}.
+\]
+
+\subsection{PI Observer (Integral Observer)}
+To eliminate the steady‑state estimation error, an integrator is added:
+\[
+\dot{z} = y - C\hat{x},\qquad
+\dot{\hat{x}} = A\hat{x} + B u + L_p(y - C\hat{x}) + L_i z.
+\]
+The augmented observer dynamics are
+\[
+\begin{bmatrix}
+\dot{\hat{x}} \\ \dot{z}
+\end{bmatrix}
+=
+\begin{bmatrix}
+A - L_p C & L_i \\ -C & 0
+\end{bmatrix}
+\begin{bmatrix} \hat{x} \\ z \end{bmatrix}
++
+\begin{bmatrix} B \\ 0 \end{bmatrix} u
++
+\begin{bmatrix} L_p \\ 1 \end{bmatrix} y.
+\]
+Placing the augmented poles at $\{-1,\,-9,\,-12\}$ yields the target polynomial
+\[
+(s+1)(s+9)(s+12) = s^3 + 22s^2 + 129s + 108.
+\]
+The determinant of the augmented matrix is
+\begin{align*}
+\begin{vmatrix}
+s+1.0512 & 78.758+l_1 & -l_3 \\
+-0.0007 & s+1.9024+l_2 & -l_4 \\
+0 & 1 & s
+\end{vmatrix}
+&= s\bigl(s^2 + (2.9536+l_2)s + 2.0549 + 1.0512l_2 + 0.0007l_1\bigr) \\
+&\quad + \bigl(l_4 s + 1.0512l_4 + 0.0007l_3\bigr) \\
+&= s^3 + (2.9536+l_2)s^2 + (2.0549 + 1.0512l_2 + 0.0007l_1 + l_4)s \\
+&\quad + 1.0512l_4 + 0.0007l_3.
+\end{align*}
+Because of the degree of freedom, we set $l_1=0$ to avoid an excessively large gain. Equating coefficients:
+\begin{align*}
+2.9536 + l_2 &= 22 \quad\Rightarrow\quad l_2 = 19.0464,\\
+2.0549 + 1.0512l_2 + l_4 &= 129 \quad\Rightarrow\quad l_4 = 129 - 2.0549 - 1.0512\times19.0464 = 106.923,\\
+1.0512l_4 + 0.0007l_3 &= 108 \quad\Rightarrow\quad l_3 = \frac{108 - 1.0512\times106.923}{0.0007} = -6282.869.
+\end{align*}
+Thus the PI observer gains are
+\[
+L_p = \begin{bmatrix} 0 \\ 19.0464 \end{bmatrix},\qquad
+L_i = \begin{bmatrix} -6282.869 \\ 106.923 \end{bmatrix}.
+\]
+The eigenvalues of the augmented matrix are exactly $\{-1,\,-12.0002,\,-8.9998\}$. After applying the PI observer, the final estimation error becomes practically zero (to within numerical precision).
+
+\subsection{Observer Speed Comparison}
+To study the trade‑off between speed and noise sensitivity, the PI observer is redesigned with three different pole locations, and measurement noise of power $10^{-12}$ is added. The following sets of gains are used:
+\begin{itemize}
+    \item \textbf{Slow} (poles $\{-0.1,\,-0.9,\,-1.2\}$):
+    \[
+    L_p = \begin{bmatrix} 0 \\ -0.7336 \end{bmatrix},\;
+    L_i = \begin{bmatrix} 113.31 \\ 0.02728 \end{bmatrix}.
+    \]
+    \item \textbf{Mid} (poles $\{-1,\,-9,\,-12\}$): as derived above.
+    \item \textbf{Fast} (poles $\{-10,\,-90,\,-120\}$):
+    \[
+    L_p = \begin{bmatrix} 0 \\ 217.0464 \end{bmatrix},\;
+    L_i = \begin{bmatrix} -3.576\times10^{6} \\ 12669.785 \end{bmatrix}.
+    \]
+    \item \textbf{Very slow} (poles $\{-0.01,\,-0.09,\,-0.12\}$):
+    \[
+    L_p = \begin{bmatrix} 0 \\ -2.7336 \end{bmatrix},\;
+    L_i = \begin{bmatrix} -1248.61 \\ 0.8356 \end{bmatrix}.
+    \]
+\end{itemize}
+The simulations (Fig.~\ref{fig:speed}) reveal that slow observers filter noise well but cannot track the first state quickly; fast observers inject large noise into the control signal and cause oscillations. The middle setting $\{0.1,0.9,1.2\}$ offers a good compromise for this application.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{image7.png}
+\caption{Observer speed comparison: control signal, output, and state estimates.}
+\label{fig:speed}
+\end{figure}
+
+% ======================================================================
+\section{Observer‑Based Control vs.\ Ideal State Feedback}
+% ======================================================================
+When the estimated states from the slow PI observer are used for feedback, the controller must compensate for an initial estimation error of $[0.001,\;0.0004]^T$. The observer‑based system eventually converges to the same steady state as the ideal case, but with a transient overshoot and undershoot in the output (Fig.~\ref{fig:obs_vs_ideal}). Since the error is in the milli‑Kelvin range, the transient is acceptable.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{image9.png}
+\caption{Ideal vs.\ observer‑based control: control signal and output.}
+\label{fig:obs_vs_ideal}
+\end{figure}
+
+% ======================================================================
+\section{Input Saturation and Anti‑Windup}
+% ======================================================================
+The control signal $u$ (coolant flow rate) is physically bounded between $0$ and $2$ (twice the nominal value). To investigate the effect of saturation, the controller and observer gains are scaled by factors $\{1,1.5,\dots,5\}$, and the system is simulated with a disturbance at $\tau=5$. Without anti‑windup (Fig.~\ref{fig:saturation}), for scale factors $\ge2$, windup becomes evident; at factor $5$, the control signal oscillates between $0$ and $2$ (bang‑bang), and the output diverges.
+
+A simple anti‑windup strategy is implemented: the integrator state $z$ is frozen ($\dot{z}=0$) whenever the unsaturated control leaves the admissible interval. With this measure (Fig.~\ref{fig:antiwindup}), the system remains stable up to scale factor $4$; at factor $5$, windup is only partially mitigated, indicating the limits of actuator authority.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{image10.png}
+\caption{Saturation effect without anti‑windup.}
+\label{fig:saturation}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{image16.png}
+\caption{Performance with anti‑windup.}
+\label{fig:antiwindup}
+\end{figure}
+
+% ======================================================================
+\section{Robustness to Parameter Uncertainty}
+% ======================================================================
+A critical source of uncertainty is the inlet flow rate $F_{os}$. Increasing it by 30\,\% changes all dimensionless parameters:
+\[
+c_0 = \frac{V_s \alpha}{F_{os}},\; c_1 = \frac{V_s \alpha R C_{aor}}{F_{os} \rho C_p},\;
+c_2 = \frac{U A_{ht}}{\rho C_p F_{os}},\; c_3 = \frac{V_s F_{js}}{F_{os} V_j},\;
+c_4 = \frac{\rho C_p V_s}{\rho_j C_{pj} V_j}\,c_2.
+\]
+The nominal controller/observer (scale factor $2$) is applied to the plant with these perturbed parameters. Even without saturation, the output estimation error remains small ($-7.43\times10^{-7}$). With saturation, the error is slightly larger ($-6.65\times10^{-6}$), but the system remains stable and tracks the desired operating point (Fig.~\ref{fig:robust}). This confirms the robustness of the designed feedback/observer structure.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{image14.png}
+\caption{Robustness test with $+30\%$ in $F_{os}$ (no saturation).}
+\label{fig:robust}
+\end{figure}
+
+% ======================================================================
+\section{Conclusion}
+% ======================================================================
+Phase~2 successfully completed the design and analysis of a complete control system for the CSTR reactor. The state‑feedback controller exhibits a limited domain of attraction, which is mapped. The invariance of the transfer function across realizations is verified. Integral action eliminates steady‑state error, but windup demands anti‑windup measures. A PI observer correctly estimates the states even under disturbances, and its bandwidth can be tuned to balance speed and noise. The observer‑based controller performs nearly as well as the ideal state feedback. Finally, the system tolerates a 30\,\% increase in the inlet flow rate, both with and without saturation, confirming its robustness.
+
+\end{document}
