@@ -25,7 +25,7 @@
 \title{Phase 1 of Modern Control Project \\
        Modeling, Structural Analysis, and Validation of a Non‑Isothermal CSTR Reactor}
 \author{Mohammad Reza Mahdavi \and Mohammad Mehdi Barzeger}
-\date{\today}
+\date{June 18, 2026}
 
 \begin{document}
 \maketitle
@@ -75,16 +75,16 @@ Numerical values of the dimensionless parameters are given in Table \ref{tab:dim
 \label{tab:dimless_param}
 \begin{tabular}{c|c|c}
 \toprule
-\textbf{Parameter} & \textbf{Value} & \textbf{Description} \\ 
+\textbf{Parameter} & \textbf{Value} & \textbf{Description} \\
 \midrule
-$c_0$ & $8.521 \times 10^{10}$ & Dimensionless reaction rate constant \\
-$c_1$ & $1.109 \times 10^{9}$ & Dimensionless heat of reaction \\
-$c_2$ & 25.15 & Dimensionless heat transfer \\
-$c_3$ & 20.01 & Dimensionless jacket flow rate \\
-$c_4$ & 241.2 & Dimensionless jacket thermal constant \\
-$x_{20}$ & 2.041 & Dimensionless inlet concentration \\
-$x_{30}$ & 0.03509 & Dimensionless inlet temperature \\
-$x_{40}$ & 0.03509 & Dimensionless cooling water temperature \\
+$c_0$ & $8.521062 \times 10^{10}$ & Dimensionless reaction rate constant \\
+$c_1$ & $1.109061 \times 10^{9}$ & Dimensionless heat of reaction \\
+$c_2$ & 25.152429 & Dimensionless heat transfer \\
+$c_3$ & 20.007080 & Dimensionless jacket flow rate \\
+$c_4$ & 241.078206 & Dimensionless jacket thermal constant \\
+$x_{20}$ & 2.040816 & Dimensionless inlet concentration \\
+$x_{30}$ & 0.035095 & Dimensionless inlet temperature \\
+$x_{40}$ & 0.035095 & Dimensionless cooling water temperature \\
 $x_{60}$ & 1 & Normalized nominal inlet flow rate \\
 \bottomrule
 \end{tabular}
@@ -96,19 +96,19 @@ $x_{60}$ & 1 & Normalized nominal inlet flow rate \\
 \subsection{Finding the Equilibrium Point}
 For the nominal input $u_{\text{nom}}=1$, the equilibrium point was obtained by numerically solving $\dot{x}=0$:
 \[
-x_{ss} = \begin{bmatrix} 1.783 \\ 0.03625 \end{bmatrix} \implies T_{ss} = \frac{x_{3,ss} \cdot E}{R} \approx 304.5\ \text{K}.
+x_{ss} = \begin{bmatrix} 1.941355 \\ 0.035537 \end{bmatrix} \implies T_{ss} = \frac{x_{3,ss} \cdot E}{R} \approx 298.413\ \text{K}.
 \]
 
 \subsection{Linear State‑Space Matrices}
 By evaluating the Jacobians of $f(x,u)$ at the equilibrium point, the linear system matrices are:
 \begin{align*}
-A &= \begin{bmatrix} -1.0903 & -122.5 \\ 0.001175 & -1.332 \end{bmatrix}, \quad
-B = \begin{bmatrix} 0 \\ -0.002063 \end{bmatrix},\\
+A &= \begin{bmatrix} -1.0512 & -78.7580 \\ 0.0007 & -1.9024 \end{bmatrix}, \quad
+B = \begin{bmatrix} 0 \\ -0.0007870 \end{bmatrix},\\
 C &= \begin{bmatrix} 0 & 1 \end{bmatrix}, \quad D = 0.
 \end{align*}
 
 \subsection{Stability and Transient Response}
-The system poles are $\lambda_{1,2} = -1.2113 \pm j\,0.3594$, indicating stability at the operating point. The high damping ratio ($\zeta \approx 0.959$) implies a fast response with negligible overshoot. The pole‑zero map and step response are shown in Fig.~\ref{fig:phase1_analysis}.
+The system poles are real and given by $\lambda_1 = -1.1182$ and $\lambda_2 = -1.8354$, indicating asymptotic stability at the operating point. Since both poles are real and negative, the system is overdamped ($\zeta = 1$ for each mode), corresponding to natural frequencies of $1.12$ and $1.84\ \text{rad/s}$ and time constants of $0.894\ \text{s}$ and $0.545\ \text{s}$, respectively. This implies a fast response with no oscillation and negligible overshoot. The pole‑zero map and step response are shown in Fig.~\ref{fig:phase1_analysis}.
 
 \begin{figure}[H]
 \centering
@@ -130,19 +130,19 @@ The system poles are $\lambda_{1,2} = -1.2113 \pm j\,0.3594$, indicating stabili
 \end{figure}
 
 \subsection{Sensitivity Analysis}
-A sensitivity analysis was performed on the overall heat transfer coefficient $U$ by varying it $\pm10\%$. The results in Table \ref{tab:poles} and Fig.~\ref{fig:sens} show that decreasing $U$ (reduced cooling capacity) moves the poles toward the imaginary axis (slower response with more oscillation), while increasing $U$ improves damping and response speed. This sensitivity must be considered in controller design.
+A sensitivity analysis was performed on the overall heat transfer coefficient $U$ by varying it $\pm10\%$. The results in Table \ref{tab:poles} and Fig.~\ref{fig:sens} show that decreasing $U$ (reduced cooling capacity) moves the dominant pole closer to the imaginary axis (slower response), while increasing $U$ pushes it further into the left half‑plane (faster response). Both poles remain real over the tested range, so no oscillatory behavior is introduced. This sensitivity must be considered in controller design.
 
 \begin{table}[H]
 \centering
-\caption{Pole locations with variations in $U$}
+\caption{Dominant pole location with variations in $U$}
 \label{tab:poles}
 \begin{tabular}{c|c|c}
 \toprule
-\textbf{$U$ (kJ/h\,m$^2$K)} & \textbf{Poles} & \textbf{Comment} \\
+\textbf{$U$ (kJ/h\,m$^2$K)} & \textbf{Pole} & \textbf{Comment} \\
 \midrule
-2758.5 ($-10\%$) & $-1.143 \pm j\,0.452$ & More oscillation \\
-3065.0 (nominal) & $-1.211 \pm j\,0.359$ & Nominal, good damping \\
-3371.5 ($+10\%$) & $-1.279 \pm j\,0.244$ & Higher damping \\
+2758.5 ($-10\%$) & $-1.1047$ & Slower response \\
+3065.0 (nominal) & $-1.1182$ & Nominal \\
+3371.5 ($+10\%$) & $-1.1377$ & Faster response \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -170,16 +170,21 @@ A sensitivity analysis was performed on the overall heat transfer coefficient $U
 \section{Canonical Forms and Structural Analysis}
 % ======================================================================
 \subsection{Canonical Forms and Similarity Transformations}
-After obtaining the system matrices $(A,B,C,D)$, similarity transformations were used to convert the model to the controller and observer canonical forms. The controller canonical form is:
+After obtaining the system matrices $(A,B,C,D)$, similarity transformations were used to convert the model to the controller and observer canonical forms. The corresponding transfer function is:
+\[
+G(s) = \frac{-0.000787017\,s - 0.000827338}{s^2 + 2.9536\,s + 2.05235}.
+\]
+
+The controller canonical form is:
 \begin{align*}
 A_{Co} &= \begin{bmatrix} 0 & 1 \\ -2.0523 & -2.9536 \end{bmatrix}, \quad
 B_{Co} = \begin{bmatrix} 0 \\ 1 \end{bmatrix},\\
-C_{Co} &= \begin{bmatrix} -7.87\times10^{-4} & 0 \end{bmatrix}, \quad D_{Co}=0.
+C_{Co} &= \begin{bmatrix} -0.0008273 & -0.0007870 \end{bmatrix}, \quad D_{Co}=0.
 \end{align*}
 The observer canonical form is:
 \begin{align*}
 A_{Ob} &= \begin{bmatrix} 0 & -2.0523 \\ 1 & -2.9536 \end{bmatrix}, \quad
-B_{Ob} = \begin{bmatrix} -7.87\times10^{-4} \\ 0 \end{bmatrix},\\
+B_{Ob} = \begin{bmatrix} -0.0008273 \\ -0.0007870 \end{bmatrix},\\
 C_{Ob} &= \begin{bmatrix} 0 & 1 \end{bmatrix}, \quad D_{Ob}=0.
 \end{align*}
 These forms clarify the internal structure of the system for further analysis.
@@ -187,21 +192,21 @@ These forms clarify the internal structure of the system for further analysis.
 \subsection{Comprehensive Controllability Analysis}
 Controllability was verified using five independent methods, all in complete agreement:
 \begin{enumerate}
-    \item \textbf{Controllability matrix:} $\mathcal{C} = [B, AB]$ was formed with entries $\begin{bmatrix} 0 & 0.062 \\ -0.008 & 0.0015 \end{bmatrix}$ and rank 2.
-    \item \textbf{Manual calculation:} The same matrix was computed without built‑in MATLAB functions, and its rank was confirmed.
-    \item \textbf{Jordan form:} In the Jordan form $A_J$, all rows of $B_J$ corresponding to each Jordan block are non‑zero.
-    \item \textbf{Controllability Gramian:} The Gramian $W_c$ is positive definite ($\text{eig}(W_c) > 0$).
-    \item \textbf{Popov–Belevitch–Hautus test:} For all eigenvalues $\lambda_i$, the matrix $[A-\lambda_i I \;\; B]$ has full rank (2).
+    \item \textbf{Controllability matrix:} $\mathcal{C} = [B, AB]$ was formed with entries $\begin{bmatrix} 0 & 0.0620 \\ -0.0008 & 0.0015 \end{bmatrix}$ and rank 2.
+    \item \textbf{Manual calculation:} The same matrix was computed without built‑in MATLAB functions, and its rank was confirmed to be 2.
+    \item \textbf{Jordan form:} In the Jordan form $J = \text{diag}(-1.8354,\,-1.1182)$ with $B_J = \begin{bmatrix} -0.0008605 \\ 0.0000735 \end{bmatrix}$, all rows of $B_J$ corresponding to each Jordan block are non‑zero.
+    \item \textbf{Controllability Gramian:} $W_c = \begin{bmatrix} 0.0003169 & -0.0000042 \\ -0.0000042 & 0.0000002 \end{bmatrix}$, with eigenvalues $\{0.0000001,\, 0.0003170\}$, confirming $W_c$ is positive definite.
+    \item \textbf{Popov–Belevitch–Hautus test:} For both eigenvalues $\lambda_1=-1.1182$ and $\lambda_2=-1.8354$, the matrix $[A-\lambda_i I \;\; B]$ has full rank (2).
 \end{enumerate}
 
 \subsection{Comprehensive Observability Analysis}
 Observability was also confirmed using five methods:
 \begin{enumerate}
-    \item \textbf{Observability matrix:} $\mathcal{O} = \begin{bmatrix} C \\ CA \end{bmatrix}$ with entries $\begin{bmatrix} 0 & 1 \\ 0.0007 & -1.9024 \end{bmatrix}$ has rank 2.
+    \item \textbf{Observability matrix:} $\mathcal{O} = \begin{bmatrix} C \\ CA \end{bmatrix} = \begin{bmatrix} 0 & 1 \\ 0.0007 & -1.9024 \end{bmatrix}$ has rank 2.
     \item \textbf{Manual calculation:} The rank of $\mathcal{O}$ was manually verified to be 2.
-    \item \textbf{Jordan form:} In $A_J$, all columns of $C_J$ corresponding to each Jordan block are non‑zero.
-    \item \textbf{Observability Gramian:} The Gramian $W_o$ is positive semi‑definite and indicates output observability.
-    \item \textbf{Popov–Belevitch–Hautus test:} For all $\lambda_i$, $\begin{bmatrix} A-\lambda_i I \\ C \end{bmatrix}$ has full rank (2).
+    \item \textbf{Jordan form:} In $J$, the associated $C_J = \begin{bmatrix} 1 & 1 \end{bmatrix}$, so all columns corresponding to each Jordan block are non‑zero.
+    \item \textbf{Observability Gramian:} $W_o = \begin{bmatrix} 0.0000 & 0.0001 \\ 0.0001 & 0.2604 \end{bmatrix}$, with eigenvalues $\{0.0000,\, 0.2604\}$, confirming $W_o$ is positive (semi‑)definite.
+    \item \textbf{Popov–Belevitch–Hautus test:} For both $\lambda_1=-1.1182$ and $\lambda_2=-1.8354$, $\begin{bmatrix} A-\lambda_i I \\ C \end{bmatrix}$ has full rank (2).
 \end{enumerate}
 
 \textbf{Conclusion:} The system is both controllable and observable, hence it is a \textbf{minimal realization}.
@@ -222,11 +227,12 @@ Figure \ref{fig:validation_signals} shows an example of the response comparison 
 \end{figure}
 
 \subsection{Error Quantification and Comprehensive Analysis}
-Figure \ref{fig:rmse_analysis} shows how the RMSE varies with input amplitude and frequency.
+For the representative test cases, the computed errors were:
 \begin{itemize}
-    \item \textbf{Step input:} As the step amplitude (deviation from the operating point) increases, the error grows. However, the maximum RMSE in the tested range remains below $2\times10^{-4}$, indicating excellent accuracy.
-    \item \textbf{Sinusoidal input:} Error increases with amplitude. Interestingly, as frequency rises, the error decreases or remains constant, a phenomenon caused by the fast system dynamics. The maximum error recorded in these tests is below $4\times10^{-5}$.
+    \item \textbf{Step input:} $\text{RMSE} = 4\times10^{-6}$, indicating excellent agreement between the linear and nonlinear models.
+    \item \textbf{Sinusoidal input:} $\text{RMSE} = 1\times10^{-6}$, again showing very close tracking between the two models.
 \end{itemize}
+Figure \ref{fig:rmse_analysis} shows how the RMSE varies with input amplitude and frequency. As amplitude increases (deviation from the operating point grows), the error generally increases for both input types; for the sinusoidal case, error tends to decrease or stay roughly constant as frequency rises, a consequence of the fast system dynamics.
 
 \begin{figure}[H]
 \centering
@@ -241,7 +247,7 @@ The results clearly show that the obtained linearized model is an extremely accu
 % ======================================================================
 \section{Overall Conclusion}
 % ======================================================================
-In this phase, the essential and critical steps for analyzing and preparing the model of a nonlinear system were completed. The nonlinear CSTR model was successfully derived and linearized around the operating point. Stability analysis confirmed asymptotic stability, and sensitivity analysis provided valuable insight into the influence of physical parameters on system dynamics. Comprehensive analyses proved the system to be a minimal realization. Finally, validation using the RMSE metric demonstrated that the linear model possesses very high accuracy and can serve as a reliable foundation for designing advanced control systems in Phase 2.
+In this phase, the essential and critical steps for analyzing and preparing the model of a nonlinear system were completed. The nonlinear CSTR model was successfully derived and linearized around the operating point. Stability analysis confirmed asymptotic stability with two real, negative poles, and sensitivity analysis provided valuable insight into the influence of physical parameters on system dynamics. Comprehensive analyses proved the system to be a minimal realization. Finally, validation using the RMSE metric demonstrated that the linear model possesses very high accuracy and can serve as a reliable foundation for designing advanced control systems in Phase 2.
 
 \begin{thebibliography}{9}
 \bibitem{perez}
